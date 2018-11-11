@@ -2,7 +2,7 @@ pub struct SudokuBoard {
     pub values: [u8; 81],
 }
 
-static NUMBERS: [u8; 9] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+static VALUES: [u8; 9] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 impl SudokuBoard {
     pub fn with_clues(clues: &[(usize, usize, u8)]) -> SudokuBoard {
@@ -21,37 +21,39 @@ impl SudokuBoard {
 
     pub fn is_valid(&self) -> bool {
         (0..9).into_iter().all(|group| {
-            NUMBERS.iter().all(|&n| {
-                match (0..9).into_iter().fold((0, 0, 0), |(r, c, b), pos| {
-                    (
-                        // Sum values in rows
-                        r + if self.values[group * 9 + pos] == n {
-                            1
-                        } else {
-                            0
-                        },
-                        // Sum values in columns
-                        c + if self.values[pos * 9 + group] == n {
-                            1
-                        } else {
-                            0
-                        },
-                        // Sum values in boxes
-                        b + if self.values
-                            [((group / 3) * 3 + pos / 3) * 9 + (group % 3) * 3 + pos % 3]
-                            == n
-                        {
-                            1
-                        } else {
-                            0
-                        },
-                    )
-                }) {
-                    (x, y, z) if x > 1 || y > 1 || z > 1 => false,
+            VALUES
+                .iter()
+                .all(|&n| match self.get_count_of_value_in_groups(group, n) {
+                    (row, col, a_box) if row > 1 || col > 1 || a_box > 1 => false,
                     _ => true,
-                }
-            })
+                })
         })
+    }
+
+    fn get_count_of_value_in_groups(&self, group: usize, n: u8) -> (i32, i32, i32) {
+        (0..9)
+            .into_iter()
+            .fold((0, 0, 0), |(row, col, a_box), pos| {
+                (
+                    // Count values in rows
+                    row + self.check_value_in_position(group * 9 + pos, n),
+                    // Count values in columns
+                    col + self.check_value_in_position(pos * 9 + group, n),
+                    // Count values in boxes
+                    a_box + self.check_value_in_position(
+                        ((group / 3) * 3 + pos / 3) * 9 + (group % 3) * 3 + pos % 3,
+                        n,
+                    ),
+                )
+            })
+    }
+
+    fn check_value_in_position(&self, index: usize, value: u8) -> i32 {
+        if self.values[index] == value {
+            1
+        } else {
+            0
+        }
     }
 }
 
