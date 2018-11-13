@@ -2,7 +2,21 @@ pub struct SudokuBoard {
     pub values: [u8; 81],
 }
 
-static VALUES: [u8; 9] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+pub type Group = [u8; 9];
+
+pub fn add(a: Group, b: &Group) -> Group {
+    new_array_from(a.iter().zip(b).map(|(a, b)| a + b))
+}
+
+fn new_array_from<F: Iterator<Item = u8>>(src: F) -> Group {
+    let mut result = [0; 9];
+    for (result_ref, val) in result.iter_mut().zip(src) {
+        *result_ref = val;
+    }
+    result
+}
+
+static VALUES: Group = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 impl SudokuBoard {
     pub fn with_clues(clues: &[(usize, usize, u8)]) -> SudokuBoard {
@@ -40,10 +54,7 @@ impl SudokuBoard {
                     // Count values in columns
                     col + self.check_value_in_position(pos * 9 + group, n),
                     // Count values in boxes
-                    a_box + self.check_value_in_position(
-                        ((group / 3) * 3 + pos / 3) * 9 + (group % 3) * 3 + pos % 3,
-                        n,
-                    ),
+                    a_box + self.check_value_in_position(get_cell_for_box_pos(group, pos), n),
                 )
             })
     }
@@ -55,6 +66,38 @@ impl SudokuBoard {
             0
         }
     }
+
+    pub fn get_available_placements(&self, row: usize, col: usize) -> Group {
+        if self.values[row * 9 + col] > 0 {
+            return [0; 9];
+        }
+
+        let the_box = (row / 3) * 3 + (col / 3);
+
+        let result: Vec<u8> = (1..10)
+            .into_iter()
+            .map(|n| {
+                if (0..9).into_iter().all(|pos| {
+                    self.values[row * 9 + pos] != n
+                        && self.values[pos * 9 + col] != n
+                        && self.values[get_cell_for_box_pos(the_box, pos)] != n
+                }) {
+                    1
+                } else {
+                    0
+                }
+            })
+            .collect();
+
+        [
+            result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7],
+            result[8],
+        ]
+    }
+}
+
+fn get_cell_for_box_pos(group: usize, pos: usize) -> usize {
+    ((group / 3) * 3 + pos / 3) * 9 + (group % 3) * 3 + pos % 3
 }
 
 #[cfg(test)]
@@ -151,5 +194,35 @@ mod tests {
     fn check_is_valid(clues: &[(usize, usize, u8)], expected: bool) -> () {
         let board = SudokuBoard::with_clues(clues);
         assert_eq!(board.is_valid(), expected);
+    }
+
+    #[test]
+    fn when_cell_has_value_then_no_available_placements() {
+        let board = SudokuBoard::with_clues(&[(4, 4, 1)]);
+        assert_eq!(board.get_available_placements(4, 4), [0; 9]);
+    }
+
+    #[test]
+    fn when_groups_have_no_values_then_all_available_placements() {
+        let board = SudokuBoard::with_clues(&[]);
+        assert_eq!(board.get_available_placements(4, 4), [1; 9]);
+    }
+
+    #[test]
+    fn when_row_has_same_value_then_remove_from_placements() {
+        let board = SudokuBoard::with_clues(&[(4, 8, 1)]);
+        assert_eq!(board.get_available_placements(4, 4), [0, 1, 1, 1, 1, 1, 1, 1, 1]);
+    }
+
+    #[test]
+    fn when_col_has_same_value_then_remove_from_placements() {
+        let board = SudokuBoard::with_clues(&[(8, 4, 5)]);
+        assert_eq!(board.get_available_placements(4, 4), [1, 1, 1, 1, 0, 1, 1, 1, 1]);
+    }
+
+    #[test]
+    fn when_box_has_same_value_then_remove_from_placements() {
+        let board = SudokuBoard::with_clues(&[(5, 5, 9)]);
+        assert_eq!(board.get_available_placements(4, 4), [1, 1, 1, 1, 1, 1, 1, 1, 0]);
     }
 }

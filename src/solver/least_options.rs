@@ -1,4 +1,4 @@
-use super::super::board::SudokuBoard;
+use super::super::board::{add, Group, SudokuBoard};
 
 pub struct LeastOptionsSolver {}
 
@@ -12,12 +12,52 @@ impl LeastOptionsSolver {
             return Err(String::from("Cannot solve invalid board"));
         }
 
-
+        // Pre-calculate available placements for all positions
+        // Pre-calculate number of options for all groups and values
+        let mut available_options = AvailableOptions::calculate_options(&board);
 
         while !board.is_filled() {
             return Err(String::from("Not implemented"));
         }
         Ok(())
+    }
+}
+
+struct AvailableOptions {
+    pub placements: [Group; 81],
+    pub row_options: [Group; 9],
+    pub col_options: [Group; 9],
+    pub box_options: [Group; 9],
+}
+
+impl AvailableOptions {
+    pub fn calculate_options(board: &SudokuBoard) -> AvailableOptions {
+        let mut result = AvailableOptions {
+            placements: [[0; 9]; 81],
+            row_options: [[0; 9]; 9],
+            col_options: [[0; 9]; 9],
+            box_options: [[0; 9]; 9],
+        };
+
+        for row in 0..9 {
+            for col in 0..9 {
+                let the_box = (row / 3) * 3 + (col / 3);
+                result.placements[row * 9 + col] = board.get_available_placements(row, col);
+
+                result.row_options[row] =
+                    add(result.row_options[row], &result.placements[row * 9 + col]);
+
+                result.col_options[col] =
+                    add(result.col_options[col], &result.placements[row * 9 + col]);
+
+                result.box_options[the_box] = add(
+                    result.box_options[the_box],
+                    &result.placements[row * 9 + col],
+                );
+            }
+        }
+
+        result
     }
 }
 
