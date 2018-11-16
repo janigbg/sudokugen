@@ -36,7 +36,6 @@ fn main() -> () {
     //     (7,1,8),(7,7,1)
     // ]);
 
-    //let mut rng = StdRng::from_entropy();
     let mut seed = [0;16];
     thread_rng().fill_bytes(&mut seed);
     let mut rng = SmallRng::from_seed(seed);
