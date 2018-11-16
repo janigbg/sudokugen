@@ -1,11 +1,14 @@
-pub struct SudokuBoard {
-    pub values: [u8; 81],
-}
+use std::fmt;
 
+pub type Placement = (usize, usize, u8);
 pub type Group = [u8; 9];
 
 pub fn add(a: Group, b: &Group) -> Group {
     new_array_from(a.iter().zip(b).map(|(a, b)| a + b))
+}
+
+pub fn sub(a: Group, b: &Group) -> Group {
+    new_array_from(a.iter().zip(b).map(|(a, b)| a - b))
 }
 
 fn new_array_from<F: Iterator<Item = u8>>(src: F) -> Group {
@@ -18,13 +21,61 @@ fn new_array_from<F: Iterator<Item = u8>>(src: F) -> Group {
 
 static VALUES: Group = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
+#[derive(Clone)]
+pub struct SudokuBoard {
+    pub values: [u8; 81],
+    pub clues: [bool; 81]
+}
+
+impl fmt::Display for SudokuBoard {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "-------------------------------------");
+        for row in 0..9 {
+            write!(f, "|");
+            for col in 0..9 {
+                write!(
+                    f,
+                    " {} {}",
+                    self.values[row * 9 + col],
+                    match col {
+                        2 | 5 => "+",
+                        8 => "|",
+                        _ => ".",
+                    }
+                );
+            }
+
+            writeln!(f);
+            writeln!(
+                f,
+                "{}",
+                match row {
+                    2 | 5 => "|---+---+---+---+---+---+---+---+---|",
+                    8 => "-------------------------------------",
+                    _ => "|--- --- ---|--- --- ---|--- --- ---|",
+                }
+            );
+        }
+        writeln!(
+            f,
+            "Valid: {}\tComplete: {}",
+            self.is_valid(),
+            self.is_filled()
+        );
+        Ok(())
+    }
+}
+
 impl SudokuBoard {
-    pub fn with_clues(clues: &[(usize, usize, u8)]) -> SudokuBoard {
-        let mut result = SudokuBoard { values: [0; 81] };
+    pub fn with_clues(clues: &[Placement]) -> SudokuBoard {
+        let mut result = SudokuBoard { values: [0; 81], clues: [false; 81] };
 
         clues
             .iter()
-            .for_each(|(row, col, val)| result.values[row * 9 + col] = *val);
+            .for_each(|(row, col, val)| {
+                result.values[row * 9 + col] = *val;
+                result.clues[row * 9 + col] = true;
+            });
 
         result
     }
@@ -93,6 +144,24 @@ impl SudokuBoard {
             result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7],
             result[8],
         ]
+    }
+
+    pub fn place(&mut self, row: usize, col: usize, num: u8) -> Result<(), String> {
+        if num > 9 {
+            return Err(String::from(format!("Value out of range: {}", num)),);
+        }
+
+        if col > 8 || row > 8 {
+            return Err(String::from(format!("Coordinate out of range: ({}, {})", row, col)),);
+        }
+
+        match self.clues[row * 9 + col] {
+            true => Err(String::from(format!("Cannot place on clue at ({}, {})", row, col)),),
+            false => {
+                self.values[row * 9 + col] = num;
+                Ok(())
+            }
+        }
     }
 }
 
@@ -191,7 +260,7 @@ mod tests {
         check_is_valid(&[(3, 3, 1), (5, 5, 1)], false);
     }
 
-    fn check_is_valid(clues: &[(usize, usize, u8)], expected: bool) -> () {
+    fn check_is_valid(clues: &[Placement], expected: bool) -> () {
         let board = SudokuBoard::with_clues(clues);
         assert_eq!(board.is_valid(), expected);
     }
