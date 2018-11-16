@@ -315,10 +315,10 @@ impl AvailableOptions {
 #[cfg(test)]
 mod tests {
 
-    use super::test::Bencher;
-    use super::Solver;
     use super::super::super::board::{Placement, SudokuBoard};
+    use super::test::Bencher;
     use super::LeastOptionsSolver;
+    use super::Solver;
 
     static SUPER_HARD: [Placement; 25] = [
         (0, 3, 3),
