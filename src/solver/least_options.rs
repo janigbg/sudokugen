@@ -89,9 +89,7 @@ impl LeastOptionsSolver {
                     if let Some((val, _)) = found_rows {
                         self.place_value(
                             board,
-                            row,
-                            col,
-                            (val + 1) as u8,
+                            (row, col, (val + 1) as u8),
                             (0..9)
                                 .into_iter()
                                 .filter(|c| *c != col && opts.placements[row * 9 + c][val] == 1)
@@ -121,9 +119,7 @@ impl LeastOptionsSolver {
                     if let Some((val, _)) = found_cols {
                         self.place_value(
                             board,
-                            row,
-                            col,
-                            (val + 1) as u8,
+                            (row, col, (val + 1) as u8),
                             (0..9)
                                 .into_iter()
                                 .map(|r| (r, opts.placements[r * 9 + col]))
@@ -154,13 +150,11 @@ impl LeastOptionsSolver {
                     if let Some((val, _)) = found_boxes {
                         self.place_value(
                             board,
-                            row,
-                            col,
-                            (val + 1) as u8,
+                            (row, col, (val + 1) as u8),
                             (0..9)
                                 .into_iter()
-                                .map(|place_in_box| {
-                                    LeastOptionsSolver::from_box_coords(box_num, place_in_box)
+                                .map(|box_index| {
+                                    LeastOptionsSolver::from_box_coords(box_num, box_index)
                                 })
                                 .filter(|(r, c)| {
                                     (*r != row || *c != col)
@@ -193,14 +187,12 @@ impl LeastOptionsSolver {
                     match self.solution.pop() {
                         None => return Err(String::from("No solution found")),
                         Some(((row, col, _), mut alts)) => {
-                            board.place(row, col, 0)?;
+                            board.place((row, col, 0))?;
                             opts.on_value_changed(board, row, col);
 
                             if alts.len() > 0 {
-                                let (new_row, new_col, new_val) = alts.pop().unwrap();
-                                self.place_value(
-                                    board, new_row, new_col, new_val, alts, &mut opts,
-                                )?;
+                                let new_val = alts.pop().unwrap();
+                                self.place_value(board, new_val, alts, &mut opts)?;
                                 found_alt = true;
                             }
                         }
@@ -221,16 +213,14 @@ impl LeastOptionsSolver {
     fn place_value(
         &mut self,
         board: &mut SudokuBoard,
-        row: usize,
-        col: usize,
-        val: u8,
+        val: Placement,
         alts: Vec<Placement>,
         opts: &mut AvailableOptions,
     ) -> Result<(), String> {
-        self.solution.push(((row, col, val), alts));
-        board.place(row, col, val)?;
+        self.solution.push((val, alts));
+        board.place(val)?;
         self.inc_placement_counter()?;
-        opts.on_value_changed(board, row, col);
+        opts.on_value_changed(board, val.0, val.1);
 
         Ok(())
     }

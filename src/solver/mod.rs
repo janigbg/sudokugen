@@ -2,6 +2,7 @@ pub mod least_options;
 
 use super::board::{Placement, SudokuBoard};
 
+#[derive(Debug)]
 pub struct Solution {
     pub placements: Vec<Placement>,
     pub iterations: u32,

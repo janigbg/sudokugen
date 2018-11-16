@@ -24,7 +24,7 @@ static VALUES: Group = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 #[derive(Clone)]
 pub struct SudokuBoard {
     pub values: [u8; 81],
-    pub clues: [bool; 81]
+    pub clues: [bool; 81],
 }
 
 impl fmt::Display for SudokuBoard {
@@ -36,7 +36,10 @@ impl fmt::Display for SudokuBoard {
                 write!(
                     f,
                     " {} {}",
-                    self.values[row * 9 + col],
+                    match self.values[row * 9 + col] {
+                        0 => ' ', 
+                        v => std::char::from_digit(v as u32, 10).unwrap(),
+                    },
                     match col {
                         2 | 5 => "+",
                         8 => "|",
@@ -68,14 +71,15 @@ impl fmt::Display for SudokuBoard {
 
 impl SudokuBoard {
     pub fn with_clues(clues: &[Placement]) -> SudokuBoard {
-        let mut result = SudokuBoard { values: [0; 81], clues: [false; 81] };
+        let mut result = SudokuBoard {
+            values: [0; 81],
+            clues: [false; 81],
+        };
 
-        clues
-            .iter()
-            .for_each(|(row, col, val)| {
-                result.values[row * 9 + col] = *val;
-                result.clues[row * 9 + col] = true;
-            });
+        clues.iter().for_each(|(row, col, val)| {
+            result.values[row * 9 + col] = *val;
+            result.clues[row * 9 + col] = true;
+        });
 
         result
     }
@@ -88,29 +92,29 @@ impl SudokuBoard {
         (0..9).into_iter().all(|group| {
             VALUES
                 .iter()
-                .all(|&n| match self.get_count_of_value_in_groups(group, n) {
+                .all(|&n| match self.get_value_count_in_groups(group, n) {
                     (row, col, a_box) if row > 1 || col > 1 || a_box > 1 => false,
                     _ => true,
                 })
         })
     }
 
-    fn get_count_of_value_in_groups(&self, group: usize, n: u8) -> (i32, i32, i32) {
+    fn get_value_count_in_groups(&self, group: usize, val: u8) -> (i32, i32, i32) {
         (0..9)
             .into_iter()
             .fold((0, 0, 0), |(row, col, a_box), pos| {
                 (
                     // Count values in rows
-                    row + self.check_value_in_position(group * 9 + pos, n),
+                    row + self.check_value_in_pos(group * 9 + pos, val),
                     // Count values in columns
-                    col + self.check_value_in_position(pos * 9 + group, n),
+                    col + self.check_value_in_pos(pos * 9 + group, val),
                     // Count values in boxes
-                    a_box + self.check_value_in_position(get_cell_for_box_pos(group, pos), n),
+                    a_box + self.check_value_in_pos(box_pos_to_index(group, pos), val),
                 )
             })
     }
 
-    fn check_value_in_position(&self, index: usize, value: u8) -> i32 {
+    fn check_value_in_pos(&self, index: usize, value: u8) -> i32 {
         if self.values[index] == value {
             1
         } else {
@@ -131,7 +135,7 @@ impl SudokuBoard {
                 if (0..9).into_iter().all(|pos| {
                     self.values[row * 9 + pos] != n
                         && self.values[pos * 9 + col] != n
-                        && self.values[get_cell_for_box_pos(the_box, pos)] != n
+                        && self.values[box_pos_to_index(the_box, pos)] != n
                 }) {
                     1
                 } else {
@@ -146,26 +150,32 @@ impl SudokuBoard {
         ]
     }
 
-    pub fn place(&mut self, row: usize, col: usize, num: u8) -> Result<(), String> {
-        if num > 9 {
-            return Err(String::from(format!("Value out of range: {}", num)),);
+    pub fn place(&mut self, (row, col, val): Placement) -> Result<(), String> {
+        if val > 9 {
+            return Err(String::from(format!("Value out of range: {}", val)));
         }
 
         if col > 8 || row > 8 {
-            return Err(String::from(format!("Coordinate out of range: ({}, {})", row, col)),);
+            return Err(String::from(format!(
+                "Coordinate out of range: ({}, {})",
+                row, col
+            )));
         }
 
         match self.clues[row * 9 + col] {
-            true => Err(String::from(format!("Cannot place on clue at ({}, {})", row, col)),),
+            true => Err(String::from(format!(
+                "Cannot place on clue at ({}, {})",
+                row, col
+            ))),
             false => {
-                self.values[row * 9 + col] = num;
+                self.values[row * 9 + col] = val;
                 Ok(())
             }
         }
     }
 }
 
-fn get_cell_for_box_pos(group: usize, pos: usize) -> usize {
+fn box_pos_to_index(group: usize, pos: usize) -> usize {
     ((group / 3) * 3 + pos / 3) * 9 + (group % 3) * 3 + pos % 3
 }
 
@@ -280,18 +290,27 @@ mod tests {
     #[test]
     fn when_row_has_same_value_then_remove_from_placements() {
         let board = SudokuBoard::with_clues(&[(4, 8, 1)]);
-        assert_eq!(board.get_available_placements(4, 4), [0, 1, 1, 1, 1, 1, 1, 1, 1]);
+        assert_eq!(
+            board.get_available_placements(4, 4),
+            [0, 1, 1, 1, 1, 1, 1, 1, 1]
+        );
     }
 
     #[test]
     fn when_col_has_same_value_then_remove_from_placements() {
         let board = SudokuBoard::with_clues(&[(8, 4, 5)]);
-        assert_eq!(board.get_available_placements(4, 4), [1, 1, 1, 1, 0, 1, 1, 1, 1]);
+        assert_eq!(
+            board.get_available_placements(4, 4),
+            [1, 1, 1, 1, 0, 1, 1, 1, 1]
+        );
     }
 
     #[test]
     fn when_box_has_same_value_then_remove_from_placements() {
         let board = SudokuBoard::with_clues(&[(5, 5, 9)]);
-        assert_eq!(board.get_available_placements(4, 4), [1, 1, 1, 1, 1, 1, 1, 1, 0]);
+        assert_eq!(
+            board.get_available_placements(4, 4),
+            [1, 1, 1, 1, 1, 1, 1, 1, 0]
+        );
     }
 }
