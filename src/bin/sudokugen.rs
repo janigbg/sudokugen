@@ -11,6 +11,10 @@ fn main() -> () {
     let solver = LeastOptionsSolver::new();
     let mut gen = RandGenerator::new(Box::new(solver));
     let puzzle = gen.generate().unwrap();
+
+    let num_clues = puzzle.board.clues.iter().filter(|&c| *c == true).count();
+    println!("\r\n# of clues: {}\r\n", num_clues);
+    println!("Verified board:\r\n{}", puzzle.board);
     
     LeastOptionsSolver::new().solve(&mut puzzle.board.clone()).unwrap();
 
