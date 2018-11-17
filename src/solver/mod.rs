@@ -8,7 +8,7 @@ pub struct Solution {
     pub iterations: u32,
 }
 
-/// An interface for solving Sudoku puzzles.
+/// Sudoku puzzle solver.
 pub trait Solver {
     /// Verifies that a `SudokuBoard` represents a valid Sudoku puzzle.
     fn verify(&mut self, board: &SudokuBoard) -> bool;
