@@ -3,7 +3,7 @@ use super::super::solver::{Solution, Solver};
 use super::{Difficulty, Generator, Puzzle};
 use rand::prelude::*;
 
-pub struct RandGenerator {
+pub struct RandGenSudoku {
     solver: Box<Solver>,
     random_seed: bool,
     seed: [u8; 16],
@@ -11,7 +11,7 @@ pub struct RandGenerator {
     max_iterations: u32
 }
 
-impl Generator for RandGenerator {
+impl Generator for RandGenSudoku {
     fn generate(&mut self) -> Result<Puzzle, String> {
 
         let mut rng = self.random_generator();
@@ -26,9 +26,9 @@ impl Generator for RandGenerator {
     }
 }
 
-impl RandGenerator {
-    pub fn new(solver: Box<Solver>) -> RandGenerator {
-        RandGenerator {
+impl RandGenSudoku {
+    pub fn new(solver: Box<Solver>) -> RandGenSudoku {
+        RandGenSudoku {
             solver,
             random_seed: true,
             seed: [0; 16],
@@ -95,7 +95,7 @@ impl RandGenerator {
         convert_to_clues(board);
     }
 
-    pub fn seed<'a>(&'a mut self, seed: u32) -> &'a mut RandGenerator {
+    pub fn seed<'a>(&'a mut self, seed: u32) -> &'a mut RandGenSudoku {
         let seed_bytes: [u8; 4] = [
             (seed >> 24) as u8,
             (seed >> 16) as u8,
@@ -109,7 +109,7 @@ impl RandGenerator {
         self
     }
 
-    pub fn difficulty<'a>(&'a mut self, diff: Difficulty) -> &'a mut RandGenerator {
+    pub fn difficulty<'a>(&'a mut self, diff: Difficulty) -> &'a mut RandGenSudoku {
         self.difficulty = diff;
         self
     }

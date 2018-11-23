@@ -9,7 +9,7 @@ use sudokugen::solver::Solver;
 fn main() -> () {
     
     let solver = LeastOptionsSolver::new();
-    let mut gen = RandGenerator::new(Box::new(solver));
+    let mut gen = RandGenSudoku::new(Box::new(solver));
     let puzzle = gen.generate().unwrap();
 
     let num_clues = puzzle.board.clues.iter().filter(|&c| *c == true).count();
