@@ -1,23 +1,7 @@
+use super::group::{new_array_from, Group};
 use std::fmt;
 
 pub type Placement = (usize, usize, u8);
-pub type Group = [u8; 9];
-
-pub fn add(a: Group, b: &Group) -> Group {
-    new_array_from(a.iter().zip(b).map(|(a, b)| a + b))
-}
-
-pub fn sub(a: Group, b: &Group) -> Group {
-    new_array_from(a.iter().zip(b).map(|(a, b)| a - b))
-}
-
-fn new_array_from<F: Iterator<Item = u8>>(src: F) -> Group {
-    let mut result = [0; 9];
-    for (result_ref, val) in result.iter_mut().zip(src) {
-        *result_ref = val;
-    }
-    result
-}
 
 static VALUES: Group = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
@@ -37,7 +21,7 @@ impl fmt::Display for SudokuBoard {
                     f,
                     " {} {}",
                     match self.values[row * 9 + col] {
-                        0 => ' ', 
+                        0 => ' ',
                         v => std::char::from_digit(v as u32, 10).unwrap(),
                     },
                     match col {
@@ -90,31 +74,29 @@ impl SudokuBoard {
 
     pub fn is_valid(&self) -> bool {
         (0..9).into_iter().all(|group| {
-            VALUES
-                .iter()
-                .all(|&n| match self.get_value_count_in_groups(group, n) {
-                    (row, col, a_box) if row > 1 || col > 1 || a_box > 1 => false,
-                    _ => true,
-                })
+            VALUES.iter().all(|&n| match self.get_val_count(group, n) {
+                (row, col, a_box) if row > 1 || col > 1 || a_box > 1 => false,
+                _ => true,
+            })
         })
     }
 
-    fn get_value_count_in_groups(&self, group: usize, val: u8) -> (i32, i32, i32) {
+    fn get_val_count(&self, group: usize, val: u8) -> (i32, i32, i32) {
         (0..9)
             .into_iter()
             .fold((0, 0, 0), |(row, col, a_box), pos| {
                 (
                     // Count values in rows
-                    row + self.check_value_in_pos(group * 9 + pos, val),
+                    row + self.check_val(group * 9 + pos, val),
                     // Count values in columns
-                    col + self.check_value_in_pos(pos * 9 + group, val),
+                    col + self.check_val(pos * 9 + group, val),
                     // Count values in boxes
-                    a_box + self.check_value_in_pos(box_pos_to_index(group, pos), val),
+                    a_box + self.check_val(box_to_index(group, pos), val),
                 )
             })
     }
 
-    fn check_value_in_pos(&self, index: usize, value: u8) -> i32 {
+    fn check_val(&self, index: usize, value: u8) -> i32 {
         if self.values[index] == value {
             1
         } else {
@@ -122,7 +104,7 @@ impl SudokuBoard {
         }
     }
 
-    pub fn get_available_placements(&self, row: usize, col: usize) -> Group {
+    pub fn get_allowed_vals(&self, row: usize, col: usize) -> Group {
         if self.values[row * 9 + col] > 0 {
             return [0; 9];
         }
@@ -135,7 +117,7 @@ impl SudokuBoard {
                 if (0..9).into_iter().all(|pos| {
                     self.values[row * 9 + pos] != n
                         && self.values[pos * 9 + col] != n
-                        && self.values[box_pos_to_index(the_box, pos)] != n
+                        && self.values[box_to_index(the_box, pos)] != n
                 }) {
                     1
                 } else {
@@ -144,10 +126,7 @@ impl SudokuBoard {
             })
             .collect();
 
-        [
-            result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7],
-            result[8],
-        ]
+        new_array_from(result.into_iter())
     }
 
     pub fn place(&mut self, (row, col, val): Placement) -> Result<(), String> {
@@ -175,7 +154,7 @@ impl SudokuBoard {
     }
 }
 
-fn box_pos_to_index(group: usize, pos: usize) -> usize {
+fn box_to_index(group: usize, pos: usize) -> usize {
     ((group / 3) * 3 + pos / 3) * 9 + (group % 3) * 3 + pos % 3
 }
 
@@ -278,39 +257,30 @@ mod tests {
     #[test]
     fn when_cell_has_value_then_no_available_placements() {
         let board = SudokuBoard::with_clues(&[(4, 4, 1)]);
-        assert_eq!(board.get_available_placements(4, 4), [0; 9]);
+        assert_eq!(board.get_allowed_vals(4, 4), [0; 9]);
     }
 
     #[test]
     fn when_groups_have_no_values_then_all_available_placements() {
         let board = SudokuBoard::with_clues(&[]);
-        assert_eq!(board.get_available_placements(4, 4), [1; 9]);
+        assert_eq!(board.get_allowed_vals(4, 4), [1; 9]);
     }
 
     #[test]
     fn when_row_has_same_value_then_remove_from_placements() {
         let board = SudokuBoard::with_clues(&[(4, 8, 1)]);
-        assert_eq!(
-            board.get_available_placements(4, 4),
-            [0, 1, 1, 1, 1, 1, 1, 1, 1]
-        );
+        assert_eq!(board.get_allowed_vals(4, 4), [0, 1, 1, 1, 1, 1, 1, 1, 1]);
     }
 
     #[test]
     fn when_col_has_same_value_then_remove_from_placements() {
         let board = SudokuBoard::with_clues(&[(8, 4, 5)]);
-        assert_eq!(
-            board.get_available_placements(4, 4),
-            [1, 1, 1, 1, 0, 1, 1, 1, 1]
-        );
+        assert_eq!(board.get_allowed_vals(4, 4), [1, 1, 1, 1, 0, 1, 1, 1, 1]);
     }
 
     #[test]
     fn when_box_has_same_value_then_remove_from_placements() {
         let board = SudokuBoard::with_clues(&[(5, 5, 9)]);
-        assert_eq!(
-            board.get_available_placements(4, 4),
-            [1, 1, 1, 1, 1, 1, 1, 1, 0]
-        );
+        assert_eq!(board.get_allowed_vals(4, 4), [1, 1, 1, 1, 1, 1, 1, 1, 0]);
     }
 }

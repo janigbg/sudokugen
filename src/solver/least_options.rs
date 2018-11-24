@@ -1,6 +1,7 @@
 extern crate test;
 
-use super::super::board::{add, sub, Group, Placement, SudokuBoard};
+use super::super::board::{Placement, SudokuBoard};
+use super::super::group::{add, sub, Group};
 use super::{Solution, Solver};
 
 pub struct LeastOptionsSolver {
@@ -244,10 +245,10 @@ impl LeastOptionsSolver {
 }
 
 struct AvailableOptions {
-    pub placements: [Group; 81],
-    pub row_options: [Group; 9],
-    pub col_options: [Group; 9],
-    pub box_options: [Group; 9],
+    placements: [Group; 81],
+    row_options: [Group; 9],
+    col_options: [Group; 9],
+    box_options: [Group; 9],
 }
 
 impl AvailableOptions {
@@ -262,7 +263,7 @@ impl AvailableOptions {
         for row in 0..9 {
             for col in 0..9 {
                 let the_box = (row / 3) * 3 + (col / 3);
-                result.placements[row * 9 + col] = board.get_available_placements(row, col);
+                result.placements[row * 9 + col] = board.get_allowed_vals(row, col);
 
                 result.row_options[row] =
                     add(result.row_options[row], &result.placements[row * 9 + col]);
@@ -293,7 +294,7 @@ impl AvailableOptions {
             self.col_options[c] = sub(self.col_options[c], pos);
             self.box_options[b] = sub(self.box_options[b], pos);
 
-            *pos = board.get_available_placements(r, c);
+            *pos = board.get_allowed_vals(r, c);
 
             self.row_options[r] = add(self.row_options[r], pos);
             self.col_options[c] = add(self.col_options[c], pos);

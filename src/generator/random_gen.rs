@@ -130,7 +130,7 @@ fn get_board_with_clues(rng: &mut Pcg64Mcg) -> SudokuBoard {
         while index < 81 {
             row = add_sequence[index] / 9;
             col = add_sequence[index] % 9;
-            let placements = board.get_available_placements(row, col);
+            let placements = board.get_allowed_vals(row, col);
             index += 1;
             match (0u8..9u8)
                 .filter(|&val| placements[val as usize] == 1)
