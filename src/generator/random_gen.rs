@@ -1,7 +1,9 @@
 use super::super::board::{SudokuBoard};
-use super::super::solver::{Solution, Solver};
+use super::super::solver::Solver;
 use super::{Difficulty, Generator, Puzzle};
 use rand::prelude::*;
+use rand::seq::SliceRandom;
+use rand_pcg::Pcg64Mcg;
 
 pub struct RandGenSudoku {
     solver: Box<Solver>,
@@ -37,42 +39,33 @@ impl RandGenSudoku {
         }
     }
 
-    fn random_generator(&mut self) -> SmallRng {
+    fn random_generator(&mut self) -> Pcg64Mcg {
         if self.random_seed {
-            thread_rng().fill_bytes(&mut self.seed);
+            Pcg64Mcg::from_entropy().fill_bytes(&mut self.seed);
         }
-        SmallRng::from_seed(self.seed)
+        Pcg64Mcg::from_seed(self.seed)
     }
 
-    fn get_solved_board(&mut self, rng: &mut SmallRng) -> SudokuBoard {
+    fn get_solved_board(&mut self, rng: &mut Pcg64Mcg) -> SudokuBoard {
         
         let mut board: SudokuBoard;
         loop {
             board = get_board_with_clues(rng);
 
-            //println!("Starting board:\r\n{}", &board);
-
             let result = self.solver.try_solve(&mut board, Some(self.max_iterations));
 
-            match result {
-                Err(_) => {
-                    //println!("Could not solve board!");
-                }
-                Ok(_solution) => {
-                    //println!("Solved board:\r\n{}", &board);
-                    //println!("Solution: {:?}", solution);
-                    break;
-                }
+            if result.is_ok() {
+                break;
             }
         }
 
         board
     }
 
-    fn get_valid_puzzle(&mut self, board: &mut SudokuBoard, rng: &mut SmallRng) -> () {
+    fn get_valid_puzzle(&mut self, board: &mut SudokuBoard, rng: &mut Pcg64Mcg) -> () {
         
         let mut removal_sequence: Vec<usize> = (0..81).collect();
-        rng.shuffle(&mut removal_sequence);
+        removal_sequence.shuffle(rng);
 
         let mut count = 0;
         let mut _removed_cells = 0;
@@ -95,7 +88,7 @@ impl RandGenSudoku {
         convert_to_clues(board);
     }
 
-    pub fn seed<'a>(&'a mut self, seed: u32) -> &'a mut RandGenSudoku {
+    pub fn seed(mut self, seed: u32) -> RandGenSudoku {
         let seed_bytes: [u8; 4] = [
             (seed >> 24) as u8,
             (seed >> 16) as u8,
@@ -109,7 +102,7 @@ impl RandGenSudoku {
         self
     }
 
-    pub fn difficulty<'a>(&'a mut self, diff: Difficulty) -> &'a mut RandGenSudoku {
+    pub fn difficulty(mut self, diff: Difficulty) -> RandGenSudoku {
         self.difficulty = diff;
         self
     }
@@ -123,12 +116,12 @@ fn convert_to_clues(board: &mut SudokuBoard) -> () {
     }
 }
 
-fn get_board_with_clues(rng: &mut SmallRng) -> SudokuBoard {
+fn get_board_with_clues(rng: &mut Pcg64Mcg) -> SudokuBoard {
 
     let mut board = SudokuBoard::with_clues(&[]);
     let mut add_sequence: Vec<usize> = (0..81).collect();
     
-    rng.shuffle(&mut add_sequence);
+    add_sequence.shuffle(rng);
     
     let mut index = 0;
     for _iteration in 0..25 {
@@ -146,7 +139,7 @@ fn get_board_with_clues(rng: &mut SmallRng) -> SudokuBoard {
                 ref v if v.len() == 0 => (),
                 values => {
                     board
-                        .place((row, col, *rng.choose(&values).unwrap() + 1))
+                        .place((row, col, *values.choose(rng).unwrap() + 1))
                         .unwrap();
                     break;
                 }
