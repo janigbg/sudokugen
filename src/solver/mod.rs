@@ -5,13 +5,13 @@ use super::board::{Placement, SudokuBoard};
 #[derive(Debug)]
 pub struct Solution {
     pub placements: Vec<Placement>,
-    pub iterations: u32,
+    pub branches: u32,
 }
 
 /// Sudoku puzzle solver.
 pub trait Solver {
     /// Verifies that a `SudokuBoard` represents a valid Sudoku puzzle.
-    fn verify(&mut self, board: &SudokuBoard) -> bool;
+    fn verify(&mut self, board: &SudokuBoard) -> (u32, bool);
 
     /// Solves `SudokuBoard` and returns the solution,
     /// or returns `String` if not solvable.

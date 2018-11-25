@@ -1,9 +1,11 @@
-use super::super::board::{SudokuBoard};
+use super::super::board::SudokuBoard;
 use super::super::solver::Solver;
 use super::{Difficulty, Generator, Puzzle};
 use rand::prelude::*;
 use rand::seq::SliceRandom;
 use rand_pcg::Pcg64Mcg;
+
+static CREATE_CLUE_ATTEMPTS: u32 = 5;
 
 pub struct RandGenSudoku {
     solver: Box<Solver>,
@@ -19,7 +21,7 @@ impl Generator for RandGenSudoku {
         let mut rng = self.random_generator();
         let mut board = self.get_solved_board(&mut rng);
 
-        self.get_valid_puzzle(&mut board, &mut rng);
+        self.get_valid_puzzle(&mut board, &mut rng)?;
 
         Ok(Puzzle{
             board,
@@ -62,30 +64,53 @@ impl RandGenSudoku {
         board
     }
 
-    fn get_valid_puzzle(&mut self, board: &mut SudokuBoard, rng: &mut Pcg64Mcg) -> () {
+    fn get_valid_puzzle(&mut self, board: &mut SudokuBoard, rng: &mut Pcg64Mcg)
+        -> Result<(), String> {
         
-        let mut removal_sequence: Vec<usize> = (0..81).collect();
-        removal_sequence.shuffle(rng);
+        let orig_values = board.values.clone();
 
-        let mut count = 0;
-        let mut _removed_cells = 0;
+        for _ in 0..CREATE_CLUE_ATTEMPTS {
+            let mut removal_sequence: Vec<usize> = (0..81).collect();
+            removal_sequence.shuffle(rng);
 
-        while count < 81 {
-            let index = removal_sequence[count];
-            if board.values[index] > 0 && !board.clues[index] {
-                let num = board.values[index];
-                let (row, col) = (index / 9, index % 9);
-                board.place((row, col, 0)).unwrap();
-                count += 1;
-                if self.solver.verify(&board) {
-                    _removed_cells += 1;
-                } else {
-                    board.place((row, col, num)).unwrap();
+            let mut count = 0;
+            let mut removed_cells = 0;
+            let mut difficulty = Difficulty::Easy;
+
+            while count < 81 {
+                let index = removal_sequence[count];
+                if board.values[index] > 0 && !board.clues[index] {
+                    let num = board.values[index];
+                    let (row, col) = (index / 9, index % 9);
+                    board.place((row, col, 0)).unwrap();
+                    count += 1;
+                    if let (branches, true) = self.solver.verify(&board) {
+                        removed_cells += 1;
+                        let last_difficulty = difficulty;
+                        difficulty = get_difficulty(removed_cells, branches);
+                        if difficulty > self.difficulty {
+                            difficulty = last_difficulty;
+                            board.place((row, col, num)).unwrap();
+                            break;
+                        }
+                    } else {
+                        board.place((row, col, num)).unwrap();
+                    }
                 }
+            }
+
+            if difficulty >= self.difficulty {
+                return Ok(convert_to_clues(board));
+            }
+            else {
+                println!("Need to retry puzzle generation.");
+                board.values = orig_values.clone();
             }
         }
 
-        convert_to_clues(board);
+        Err(String::from(format!(
+                "Could not generate puzzle of difficulty {}",
+                self.difficulty)))
     }
 
     pub fn seed(mut self, seed: u32) -> RandGenSudoku {
@@ -105,6 +130,16 @@ impl RandGenSudoku {
     pub fn difficulty(mut self, diff: Difficulty) -> RandGenSudoku {
         self.difficulty = diff;
         self
+    }
+}
+
+fn get_difficulty(removed: u32, branches: u32) -> Difficulty {
+    let clues = 81 - removed;
+    match (clues, branches) {
+        (c, b) if b > 1 || c < 25 => Difficulty::Evil,
+        (c, b) if b > 0 || c < 28 => Difficulty::Hard,
+        (c, _) if c < 35 => Difficulty::Medium,
+        _ => Difficulty::Easy
     }
 }
 

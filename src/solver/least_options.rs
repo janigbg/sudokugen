@@ -4,22 +4,28 @@ use super::super::board::{Placement, SudokuBoard};
 use super::super::group::{add, sub, Group};
 use super::{Solution, Solver};
 
+struct SolutionStep {
+    placement: Placement,
+    alts: Vec<Placement>,
+    branches: u32,
+}
+
 pub struct LeastOptionsSolver {
-    solution: Vec<(Placement, Vec<Placement>)>,
+    solution: Vec<SolutionStep>,
     max_iterations: Option<u32>,
     iterations: u32,
 }
 
 impl Solver for LeastOptionsSolver {
-    fn verify(&mut self, board: &SudokuBoard) -> bool {
+    fn verify(&mut self, board: &SudokuBoard) -> (u32, bool) {
         let mut clone = board.clone();
 
         self.solution.clear();
         self.max_iterations = None;
 
         match self.find_solution(&mut clone) {
-            Ok(_) => self.find_solution(&mut clone).is_err() && self.solution.is_empty(),
-            Err(_) => false,
+            Ok(_) => (self.branches(), self.find_solution(&mut clone).is_err() && self.solution.is_empty()),
+            Err(_) => (self.branches(), false),
         }
     }
 
@@ -37,10 +43,11 @@ impl Solver for LeastOptionsSolver {
 
         self.find_solution(board)?;
 
-        let (result, _): (Vec<Placement>, Vec<_>) = self.solution.drain(..).unzip();
+        let (result, branches): (Vec<Placement>, Vec<u32>) =
+            self.solution.drain(..).map(|step| (step.placement, step.branches)).unzip();
         Ok(Solution {
             placements: result,
-            iterations: self.iterations,
+            branches: branches.iter().sum(),
         })
     }
 }
@@ -52,6 +59,10 @@ impl LeastOptionsSolver {
             max_iterations: None,
             iterations: 0,
         }
+    }
+
+    fn branches(&self) -> u32 {
+        self.solution.iter().map(|step| step.branches).sum()
     }
 
     fn find_solution(&mut self, board: &mut SudokuBoard) -> Result<(), String> {
@@ -96,6 +107,7 @@ impl LeastOptionsSolver {
                                 .filter(|c| *c != col && opts.placements[row * 9 + c][val] == 1)
                                 .map(|c| (row, c, (val + 1) as u8))
                                 .collect(),
+                            (options - 1) as u32,
                             &mut opts,
                         )?;
 
@@ -127,6 +139,7 @@ impl LeastOptionsSolver {
                                 .filter(|(i, r)| *i != row && r[val] == 1)
                                 .map(|(i, _)| (i, col, (val + 1) as u8))
                                 .collect(),
+                            (options - 1) as u32,
                             &mut opts,
                         )?;
 
@@ -163,6 +176,7 @@ impl LeastOptionsSolver {
                                 })
                                 .map(|(r, c)| (r, c, (val + 1) as u8))
                                 .collect(),
+                            (options - 1) as u32,
                             &mut opts,
                         )?;
 
@@ -187,13 +201,14 @@ impl LeastOptionsSolver {
                     let mut found_alt = false;
                     match self.solution.pop() {
                         None => return Err(String::from("No solution found")),
-                        Some(((row, col, _), mut alts)) => {
+                        Some(mut step) => {
+                            let (row, col, _) = step.placement;
                             board.place((row, col, 0))?;
                             opts.on_value_changed(board, row, col);
 
-                            if alts.len() > 0 {
-                                let new_val = alts.pop().unwrap();
-                                self.place_value(board, new_val, alts, &mut opts)?;
+                            if step.alts.len() > 0 {
+                                let new_val = step.alts.pop().unwrap();
+                                self.place_value(board, new_val, step.alts, step.branches, &mut opts)?;
                                 found_alt = true;
                             }
                         }
@@ -206,7 +221,7 @@ impl LeastOptionsSolver {
             }
         }
 
-        println!("Iterations:{}", self.iterations);
+        println!("Iterations:{}, branches:{}", self.iterations, self.branches());
 
         Ok(())
     }
@@ -216,9 +231,14 @@ impl LeastOptionsSolver {
         board: &mut SudokuBoard,
         val: Placement,
         alts: Vec<Placement>,
+        branches: u32,
         opts: &mut AvailableOptions,
     ) -> Result<(), String> {
-        self.solution.push((val, alts));
+        self.solution.push(SolutionStep {
+            placement: val,
+            alts,
+            branches,
+        });
         board.place(val)?;
         self.inc_placement_counter()?;
         opts.on_value_changed(board, val.0, val.1);
@@ -415,7 +435,7 @@ mod tests {
     fn verify_super_hard() {
         let board = SudokuBoard::with_clues(&REFLECTION_SYMMETRY);
 
-        let result = LeastOptionsSolver::new().verify(&board);
+        let (_, result) = LeastOptionsSolver::new().verify(&board);
         assert_eq!(true, result);
     }
 
