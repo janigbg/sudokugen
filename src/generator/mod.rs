@@ -43,5 +43,5 @@ pub struct Puzzle {
 /// Sudoku puzzle generator.
 pub trait Generator {
     /// Generates sudoku puzzle or an error if generation fails.
-    fn generate(&mut self) -> Result<Puzzle, String>;
+    fn run(&mut self) -> Result<Puzzle, String>;
 }

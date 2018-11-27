@@ -10,6 +10,7 @@ struct SolutionStep {
     branches: u32,
 }
 
+#[derive(Default)]
 pub struct LeastOptionsSolver {
     solution: Vec<SolutionStep>,
     max_iterations: Option<u32>,

@@ -5,24 +5,30 @@ use rand::prelude::*;
 use rand::seq::SliceRandom;
 use rand_pcg::Pcg64Mcg;
 
+/// Number of attempts of creating board with valid
+/// set of clues
 static CREATE_CLUE_ATTEMPTS: u32 = 5;
 
-pub struct RandGenSudoku {
+/// Generator for creating random sudoku puzzle.
+/// 
+/// Allows specifying random seed and `Difficulty`.
+pub struct RandomSudoku {
     solver: Box<Solver>,
     random_seed: bool,
     seed: [u8; 16],
     difficulty: Difficulty,
-    max_iterations: u32
+    max_iterations: u32,
 }
 
-impl Generator for RandGenSudoku {
-    fn generate(&mut self) -> Result<Puzzle, String> {
-
+impl Generator for RandomSudoku {    
+    fn run(&mut self) -> Result<Puzzle, String> {
+        // Set up random generator
         let mut rng = self.random_generator();
-        let mut board = self.get_solved_board(&mut rng);
-
-        self.get_valid_puzzle(&mut board, &mut rng)?;
-
+        // Randomize clues and solve board
+        let mut board = self.solve_with_random_clues(&mut rng);
+        // Find valid puzzle, if possible
+        self.find_valid_puzzle(&mut board, &mut rng)?;
+        // Return puzzle
         Ok(Puzzle{
             board,
             difficulty: self.difficulty
@@ -30,16 +36,53 @@ impl Generator for RandGenSudoku {
     }
 }
 
-impl RandGenSudoku {
-    pub fn new(solver: Box<Solver>) -> RandGenSudoku {
-        RandGenSudoku {
-            solver,
+impl RandomSudoku {
+    /// Creates new `RandomSudoku` with default settings
+    /// and specified `Solver`.
+    /// 
+    /// Can be further customized with builder methods
+    /// `seed` and `difficulty`.
+    pub fn new<T>(solver: T) -> RandomSudoku
+        where T: Solver + 'static {
+        // Default settings with specified solver
+        RandomSudoku {
+            solver: Box::new(solver),
             random_seed: true,
             seed: [0; 16],
             difficulty: Difficulty::Easy,
             max_iterations: 1000,
         }
     }
+
+    /// Sets random seed to use for puzzle generation.
+    /// 
+    /// Using same seed (and same `Difficulty`) will generate
+    /// the exact same puzzle.
+    pub fn seed(mut self, seed: u32) -> RandomSudoku {
+        // Build array from u32
+        let seed_bytes: [u8; 4] = [
+            (seed >> 24) as u8,
+            (seed >> 16) as u8,
+            (seed >> 8) as u8,
+            seed as u8,
+        ];
+        self.random_seed = false;
+        // Duplicate u32 seed to fill up seed array
+        // TODO: Improve, this might impact randomness of generator
+        for (i, pos) in self.seed.iter_mut().enumerate() {
+            *pos = seed_bytes[i % 4];
+        }
+        self
+    }
+
+    /// Sets target `Difficulty` of puzzle.
+    pub fn difficulty(mut self, diff: Difficulty) -> RandomSudoku {
+        self.difficulty = diff;
+        self
+    }
+}
+
+impl RandomSudoku {
 
     fn random_generator(&mut self) -> Pcg64Mcg {
         if self.random_seed {
@@ -48,7 +91,7 @@ impl RandGenSudoku {
         Pcg64Mcg::from_seed(self.seed)
     }
 
-    fn get_solved_board(&mut self, rng: &mut Pcg64Mcg) -> SudokuBoard {
+    fn solve_with_random_clues(&mut self, rng: &mut Pcg64Mcg) -> SudokuBoard {
         
         let mut board: SudokuBoard;
         loop {
@@ -64,7 +107,7 @@ impl RandGenSudoku {
         board
     }
 
-    fn get_valid_puzzle(&mut self, board: &mut SudokuBoard, rng: &mut Pcg64Mcg)
+    fn find_valid_puzzle(&mut self, board: &mut SudokuBoard, rng: &mut Pcg64Mcg)
         -> Result<(), String> {
         
         let orig_values = board.values.clone();
@@ -113,24 +156,6 @@ impl RandGenSudoku {
                 self.difficulty)))
     }
 
-    pub fn seed(mut self, seed: u32) -> RandGenSudoku {
-        let seed_bytes: [u8; 4] = [
-            (seed >> 24) as u8,
-            (seed >> 16) as u8,
-            (seed >> 8) as u8,
-            seed as u8,
-        ];
-        self.random_seed = false;
-        for (i, pos) in self.seed.iter_mut().enumerate() {
-            *pos = seed_bytes[i % 4];
-        }
-        self
-    }
-
-    pub fn difficulty(mut self, diff: Difficulty) -> RandGenSudoku {
-        self.difficulty = diff;
-        self
-    }
 }
 
 fn get_difficulty(removed: u32, branches: u32) -> Difficulty {
