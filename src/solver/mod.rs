@@ -7,7 +7,7 @@ pub struct Solution {
     pub placements: Vec<Placement>,
     pub branches: u32,
 }
-
+#[derive(Clone, Copy, Debug, PartialOrd, PartialEq)]
 pub enum Verification {
     NotValid,
     ValidWithBranches(u32),
@@ -16,7 +16,7 @@ pub enum Verification {
 /// Sudoku puzzle solver.
 pub trait Solver {
     /// Verifies that a `SudokuBoard` represents a valid Sudoku puzzle.
-    fn verify(&mut self, board: &SudokuBoard) -> (u32, bool);
+    fn verify(&mut self, board: &SudokuBoard) -> Verification;
 
     /// Solves `SudokuBoard` and returns the solution,
     /// or returns `String` if not solvable.

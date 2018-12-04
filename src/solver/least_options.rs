@@ -2,7 +2,7 @@ extern crate test;
 
 use super::super::board::{Placement, SudokuBoard};
 use super::super::group::{add, sub, Group};
-use super::{Solution, Solver};
+use super::{Solution, Solver, Verification};
 
 struct SolutionStep {
     placement: Placement,
@@ -18,18 +18,18 @@ pub struct LeastOptionsSolver {
 }
 
 impl Solver for LeastOptionsSolver {
-    fn verify(&mut self, board: &SudokuBoard) -> (u32, bool) {
+    fn verify(&mut self, board: &SudokuBoard) -> Verification {
         let mut clone = board.clone();
 
         self.solution.clear();
         self.max_iterations = None;
 
         match self.find_solution(&mut clone) {
-            Ok(_) => (
-                self.branches(),
-                self.find_solution(&mut clone).is_err() && self.solution.is_empty(),
-            ),
-            Err(_) => (self.branches(), false),
+            Ok(_) => match self.find_solution(&mut clone).is_err() && self.solution.is_empty() {
+                true => Verification::ValidWithBranches(self.branches()),
+                false => Verification::NotValid,
+            },
+            Err(_) => Verification::NotValid,
         }
     }
 
@@ -278,7 +278,7 @@ impl LeastOptionsSolver {
     }
 
     /// Finds number of placement options for value in a group (row, column or box).
-    /// 
+    ///
     /// Returns `None` if no placement options.
     fn find_option(index: usize, group: Group, options: u8, opts: &[Group; 81]) -> Option<usize> {
         group
@@ -391,7 +391,7 @@ mod tests {
     use super::super::super::board::{Placement, SudokuBoard};
     use super::test::Bencher;
     use super::LeastOptionsSolver;
-    use super::Solver;
+    use super::{Solver, Verification};
 
     static SUPER_HARD: [Placement; 25] = [
         (0, 3, 3),
@@ -497,8 +497,8 @@ mod tests {
     fn verify_super_hard() {
         let board = SudokuBoard::with_clues(&REFLECTION_SYMMETRY);
 
-        let (_, result) = LeastOptionsSolver::new().verify(&board);
-        assert_eq!(true, result);
+        let result = LeastOptionsSolver::new().verify(&board);
+        assert_eq!(Verification::ValidWithBranches(0), result);
     }
 
     #[test]

@@ -1,5 +1,5 @@
 use super::super::board::SudokuBoard;
-use super::super::solver::Solver;
+use super::super::solver::{Solver, Verification};
 use super::{Difficulty, Generator, Puzzle};
 use rand::prelude::*;
 use rand::seq::SliceRandom;
@@ -10,7 +10,7 @@ use rand_pcg::Pcg64Mcg;
 static CREATE_CLUE_ATTEMPTS: u32 = 5;
 
 /// Generator for creating random sudoku puzzle.
-/// 
+///
 /// Allows specifying random seed and `Difficulty`.
 pub struct RandomSudoku {
     solver: Box<Solver>,
@@ -20,7 +20,7 @@ pub struct RandomSudoku {
     max_iterations: u32,
 }
 
-impl Generator for RandomSudoku {    
+impl Generator for RandomSudoku {
     fn run(&mut self) -> Result<Puzzle, String> {
         // Set up random generator
         let mut rng = self.random_generator();
@@ -29,9 +29,9 @@ impl Generator for RandomSudoku {
         // Find valid puzzle, if possible
         self.find_valid_puzzle(&mut board, &mut rng)?;
         // Return puzzle
-        Ok(Puzzle{
+        Ok(Puzzle {
             board,
-            difficulty: self.difficulty
+            difficulty: self.difficulty,
         })
     }
 }
@@ -39,11 +39,13 @@ impl Generator for RandomSudoku {
 impl RandomSudoku {
     /// Creates new `RandomSudoku` with default settings
     /// and specified `Solver`.
-    /// 
+    ///
     /// Can be further customized with builder methods
     /// `seed` and `difficulty`.
     pub fn new<T>(solver: T) -> RandomSudoku
-        where T: Solver + 'static {
+    where
+        T: Solver + 'static,
+    {
         // Default settings with specified solver
         RandomSudoku {
             solver: Box::new(solver),
@@ -55,7 +57,7 @@ impl RandomSudoku {
     }
 
     /// Sets random seed to use for puzzle generation.
-    /// 
+    ///
     /// Using same seed (and same `Difficulty`) will generate
     /// the exact same puzzle.
     pub fn seed(mut self, seed: u32) -> RandomSudoku {
@@ -83,7 +85,6 @@ impl RandomSudoku {
 }
 
 impl RandomSudoku {
-
     fn random_generator(&mut self) -> Pcg64Mcg {
         if self.random_seed {
             Pcg64Mcg::from_entropy().fill_bytes(&mut self.seed);
@@ -92,7 +93,6 @@ impl RandomSudoku {
     }
 
     fn solve_with_random_clues(&mut self, rng: &mut Pcg64Mcg) -> SudokuBoard {
-        
         let mut board: SudokuBoard;
         loop {
             board = get_board_with_clues(rng);
@@ -107,9 +107,11 @@ impl RandomSudoku {
         board
     }
 
-    fn find_valid_puzzle(&mut self, board: &mut SudokuBoard, rng: &mut Pcg64Mcg)
-        -> Result<(), String> {
-        
+    fn find_valid_puzzle(
+        &mut self,
+        board: &mut SudokuBoard,
+        rng: &mut Pcg64Mcg,
+    ) -> Result<(), String> {
         let orig_values = board.values.clone();
 
         for _ in 0..CREATE_CLUE_ATTEMPTS {
@@ -127,7 +129,7 @@ impl RandomSudoku {
                     let (row, col) = (index / 9, index % 9);
                     board.place((row, col, 0)).unwrap();
                     count += 1;
-                    if let (branches, true) = self.solver.verify(&board) {
+                    if let Verification::ValidWithBranches(branches) = self.solver.verify(&board) {
                         removed_cells += 1;
                         let last_difficulty = difficulty;
                         difficulty = get_difficulty(removed_cells, branches);
@@ -144,18 +146,17 @@ impl RandomSudoku {
 
             if difficulty >= self.difficulty {
                 return Ok(convert_to_clues(board));
-            }
-            else {
+            } else {
                 println!("Need to retry puzzle generation.");
                 board.values = orig_values.clone();
             }
         }
 
         Err(String::from(format!(
-                "Could not generate puzzle of difficulty {}",
-                self.difficulty)))
+            "Could not generate puzzle of difficulty {}",
+            self.difficulty
+        )))
     }
-
 }
 
 fn get_difficulty(removed: u32, branches: u32) -> Difficulty {
@@ -164,7 +165,7 @@ fn get_difficulty(removed: u32, branches: u32) -> Difficulty {
         (c, b) if b > 1 || c < 25 => Difficulty::Evil,
         (c, b) if b > 0 || c < 28 => Difficulty::Hard,
         (c, _) if c < 35 => Difficulty::Medium,
-        _ => Difficulty::Easy
+        _ => Difficulty::Easy,
     }
 }
 
@@ -177,12 +178,11 @@ fn convert_to_clues(board: &mut SudokuBoard) -> () {
 }
 
 fn get_board_with_clues(rng: &mut Pcg64Mcg) -> SudokuBoard {
-
     let mut board = SudokuBoard::with_clues(&[]);
     let mut add_sequence: Vec<usize> = (0..81).collect();
-    
+
     add_sequence.shuffle(rng);
-    
+
     let mut index = 0;
     for _iteration in 0..25 {
         let mut row: usize;
