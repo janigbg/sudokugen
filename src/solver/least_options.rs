@@ -25,7 +25,10 @@ impl Solver for LeastOptionsSolver {
         self.max_iterations = None;
 
         match self.find_solution(&mut clone) {
-            Ok(_) => (self.branches(), self.find_solution(&mut clone).is_err() && self.solution.is_empty()),
+            Ok(_) => (
+                self.branches(),
+                self.find_solution(&mut clone).is_err() && self.solution.is_empty(),
+            ),
             Err(_) => (self.branches(), false),
         }
     }
@@ -44,8 +47,11 @@ impl Solver for LeastOptionsSolver {
 
         self.find_solution(board)?;
 
-        let (result, branches): (Vec<Placement>, Vec<u32>) =
-            self.solution.drain(..).map(|step| (step.placement, step.branches)).unzip();
+        let (result, branches): (Vec<Placement>, Vec<u32>) = self
+            .solution
+            .drain(..)
+            .map(|step| (step.placement, step.branches))
+            .unzip();
         Ok(Solution {
             placements: result,
             branches: branches.iter().sum(),
@@ -83,110 +89,109 @@ impl LeastOptionsSolver {
 
             for options in 1..10 {
                 for index in 0..81 {
+                    // Already contains value, ignore
                     if board.values[index] > 0 {
                         continue;
                     }
 
                     let row = index / 9;
                     let col = index % 9;
+                    // Get box number by finding which third of rows respectively
+                    // columns the current position belongs to
                     let box_num = (index / 27) * 3 + (index % 9) / 3;
 
-                    let found_rows =
-                        opts.row_options[row]
-                            .iter()
-                            .enumerate()
-                            .find(|(val, &amount)| {
-                                amount == options && opts.placements[index][*val] == 1
-                            });
+                    // -----
+                    // ROWS
+                    // -----
 
-                    if let Some((val, _)) = found_rows {
+                    let found_rows = LeastOptionsSolver::find_option(
+                        index,
+                        opts.row_options[row],
+                        options,
+                        &opts.placements,
+                    );
+
+                    if let Some(val) = found_rows {
                         self.place_value(
                             board,
                             (row, col, (val + 1) as u8),
-                            (0..9)
-                                .into_iter()
-                                .filter(|c| *c != col && opts.placements[row * 9 + c][val] == 1)
-                                .map(|c| (row, c, (val + 1) as u8))
-                                .collect(),
+                            LeastOptionsSolver::find_row_alts(row, col, val, &opts.placements),
                             (options - 1) as u32,
                             &mut opts,
                         )?;
 
-                        // println!("Found ROW, ({}, {}) = {}, options = {}, alts.len() = {}",
-                        //     row, col, (val+1), options, alts.len());
-
                         found_placements = true;
                         match options {
+                            // Perform all trivial placements
                             1 => continue,
+                            // For non-trivial placements (branching),
+                            // redo available options calculations
                             _ => break,
                         };
                     }
 
-                    let found_cols =
-                        opts.col_options[col]
-                            .iter()
-                            .enumerate()
-                            .find(|(val, &amount)| {
-                                amount == options && opts.placements[index][*val] == 1
-                            });
+                    // -----
+                    // COLS
+                    // -----
 
-                    if let Some((val, _)) = found_cols {
+                    let found_cols = LeastOptionsSolver::find_option(
+                        index,
+                        opts.col_options[col],
+                        options,
+                        &opts.placements,
+                    );
+
+                    if let Some(val) = found_cols {
                         self.place_value(
                             board,
                             (row, col, (val + 1) as u8),
-                            (0..9)
-                                .into_iter()
-                                .map(|r| (r, opts.placements[r * 9 + col]))
-                                .filter(|(i, r)| *i != row && r[val] == 1)
-                                .map(|(i, _)| (i, col, (val + 1) as u8))
-                                .collect(),
+                            LeastOptionsSolver::find_col_alts(row, col, val, &opts.placements),
                             (options - 1) as u32,
                             &mut opts,
                         )?;
 
-                        // println!("Found COL, ({}, {}) = {}, options = {}, alts.len() = {}",
-                        //     row, col, (val+1), options, alts.len());
-
                         found_placements = true;
                         match options {
+                            // Perform all trivial placements
                             1 => continue,
+                            // For non-trivial placements (branching),
+                            // redo available options calculations
                             _ => break,
                         };
                     }
 
-                    let found_boxes =
-                        opts.box_options[box_num]
-                            .iter()
-                            .enumerate()
-                            .find(|(val, &amount)| {
-                                amount == options && opts.placements[row * 9 + col][*val] == 1
-                            });
+                    // -----
+                    // BOXES
+                    // -----
 
-                    if let Some((val, _)) = found_boxes {
+                    let found_boxes = LeastOptionsSolver::find_option(
+                        index,
+                        opts.box_options[box_num],
+                        options,
+                        &opts.placements,
+                    );
+
+                    if let Some(val) = found_boxes {
                         self.place_value(
                             board,
                             (row, col, (val + 1) as u8),
-                            (0..9)
-                                .into_iter()
-                                .map(|box_index| {
-                                    LeastOptionsSolver::from_box_coords(box_num, box_index)
-                                })
-                                .filter(|(r, c)| {
-                                    (*r != row || *c != col)
-                                        && opts.placements[*r * 9 + *c][val] == 1
-                                })
-                                .map(|(r, c)| (r, c, (val + 1) as u8))
-                                .collect(),
+                            LeastOptionsSolver::find_box_alts(
+                                row,
+                                col,
+                                box_num,
+                                val,
+                                &opts.placements,
+                            ),
                             (options - 1) as u32,
                             &mut opts,
                         )?;
 
-                        // println!("Found BOX, ({}, {}) = {}, options = {}, alts.len() = {}",
-                        //     row, col, (val+1), options, alts.len());
-
                         found_placements = true;
                         match options {
+                            // Perform all trivial placements
                             1 => continue,
+                            // For non-trivial placements (branching),
+                            // redo available options calculations
                             _ => break,
                         };
                     }
@@ -209,7 +214,13 @@ impl LeastOptionsSolver {
 
                             if step.alts.len() > 0 {
                                 let new_val = step.alts.pop().unwrap();
-                                self.place_value(board, new_val, step.alts, step.branches, &mut opts)?;
+                                self.place_value(
+                                    board,
+                                    new_val,
+                                    step.alts,
+                                    step.branches,
+                                    &mut opts,
+                                )?;
                                 found_alt = true;
                             }
                         }
@@ -222,9 +233,59 @@ impl LeastOptionsSolver {
             }
         }
 
-        println!("Iterations:{}, branches:{}", self.iterations, self.branches());
+        println!(
+            "Iterations:{}, branches:{}",
+            self.iterations,
+            self.branches()
+        );
 
         Ok(())
+    }
+
+    /// Finds alternative placements for value on same row.
+    fn find_row_alts(row: usize, col: usize, val: usize, opts: &[Group; 81]) -> Vec<Placement> {
+        (0..9)
+            .into_iter()
+            .filter(|c| *c != col && opts[row * 9 + c][val] == 1)
+            .map(|c| (row, c, (val + 1) as u8))
+            .collect()
+    }
+
+    /// Finds alternative placements for value on same column.
+    fn find_col_alts(row: usize, col: usize, val: usize, opts: &[Group; 81]) -> Vec<Placement> {
+        (0..9)
+            .into_iter()
+            .map(|r| (r, opts[r * 9 + col]))
+            .filter(|(i, r)| *i != row && r[val] == 1)
+            .map(|(i, _)| (i, col, (val + 1) as u8))
+            .collect()
+    }
+
+    /// Finds alternative placements for value in same box.
+    fn find_box_alts(
+        row: usize,
+        col: usize,
+        box_num: usize,
+        val: usize,
+        opts: &[Group; 81],
+    ) -> Vec<Placement> {
+        (0..9)
+            .into_iter()
+            .map(|box_index| LeastOptionsSolver::from_box_coords(box_num, box_index))
+            .filter(|(r, c)| (*r != row || *c != col) && opts[*r * 9 + *c][val] == 1)
+            .map(|(r, c)| (r, c, (val + 1) as u8))
+            .collect()
+    }
+
+    /// Finds number of placement options for value in a group (row, column or box).
+    /// 
+    /// Returns `None` if no placement options.
+    fn find_option(index: usize, group: Group, options: u8, opts: &[Group; 81]) -> Option<usize> {
+        group
+            .iter()
+            .enumerate()
+            .find(|(val, &amount)| amount == options && opts[index][*val] == 1)
+            .map(|pair| pair.0)
     }
 
     fn place_value(

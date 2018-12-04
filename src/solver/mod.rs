@@ -8,6 +8,11 @@ pub struct Solution {
     pub branches: u32,
 }
 
+pub enum Verification {
+    NotValid,
+    ValidWithBranches(u32),
+}
+
 /// Sudoku puzzle solver.
 pub trait Solver {
     /// Verifies that a `SudokuBoard` represents a valid Sudoku puzzle.
