@@ -12,8 +12,8 @@ pub enum Difficulty {
     Evil,
 }
 
-impl From<u64> for Difficulty {
-    fn from(x: u64) -> Self {
+impl From<u32> for Difficulty {
+    fn from(x: u32) -> Self {
         match x {
             0 => Difficulty::Easy,
             1 => Difficulty::Medium,
