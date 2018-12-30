@@ -120,7 +120,7 @@ impl RandomSudoku {
 
             let mut count = 0;
             let mut removed_cells = 0;
-            let mut difficulty = Difficulty::Easy;
+            let mut diff = Difficulty::Easy;
 
             while count < 81 {
                 let index = removal_sequence[count];
@@ -131,10 +131,10 @@ impl RandomSudoku {
                     count += 1;
                     if let Verification::ValidWithBranches(branches) = self.solver.verify(&board) {
                         removed_cells += 1;
-                        let last_difficulty = difficulty;
-                        difficulty = get_difficulty(removed_cells, branches);
-                        if difficulty > self.difficulty {
-                            difficulty = last_difficulty;
+                        let prev_diff = diff;
+                        diff = get_difficulty(removed_cells, branches);
+                        if diff > self.difficulty {
+                            diff = prev_diff;
                             board.place((row, col, num)).unwrap();
                             break;
                         }
@@ -144,7 +144,7 @@ impl RandomSudoku {
                 }
             }
 
-            if difficulty >= self.difficulty {
+            if diff >= self.difficulty {
                 return Ok(convert_to_clues(board));
             } else {
                 println!("Need to retry puzzle generation.");

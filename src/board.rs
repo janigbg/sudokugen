@@ -13,9 +13,9 @@ pub struct SudokuBoard {
 
 impl fmt::Display for SudokuBoard {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "-------------------------------------");
+        writeln!(f, "-------------------------------------")?;
         for row in 0..9 {
-            write!(f, "|");
+            write!(f, "|")?;
             for col in 0..9 {
                 write!(
                     f,
@@ -29,10 +29,10 @@ impl fmt::Display for SudokuBoard {
                         8 => "|",
                         _ => ".",
                     }
-                );
+                )?;
             }
 
-            writeln!(f);
+            writeln!(f)?;
             writeln!(
                 f,
                 "{}",
@@ -41,14 +41,14 @@ impl fmt::Display for SudokuBoard {
                     8 => "-------------------------------------",
                     _ => "|--- --- ---|--- --- ---|--- --- ---|",
                 }
-            );
+            )?;
         }
         writeln!(
             f,
             "Valid: {}\tComplete: {}",
             self.is_valid(),
             self.is_filled()
-        );
+        )?;
         Ok(())
     }
 }
