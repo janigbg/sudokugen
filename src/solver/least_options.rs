@@ -4,6 +4,48 @@ use super::super::board::{Placement, SudokuBoard};
 use super::super::group::{add, sub, Group};
 use super::{Solution, Solver, Verification};
 
+#[cfg_attr(rustfmt, rustfmt_skip)]
+static BOX_BY_INDEX: [usize; 81] =
+    [
+        0, 0, 0, 1, 1, 1, 2, 2, 2,
+        0, 0, 0, 1, 1, 1, 2, 2, 2,
+        0, 0, 0, 1, 1, 1, 2, 2, 2,
+        3, 3, 3, 4, 4, 4, 5, 5, 5,
+        3, 3, 3, 4, 4, 4, 5, 5, 5,
+        3, 3, 3, 4, 4, 4, 5, 5, 5,
+        6, 6, 6, 7, 7, 7, 8, 8, 8,
+        6, 6, 6, 7, 7, 7, 8, 8, 8,
+        6, 6, 6, 7, 7, 7, 8, 8, 8,
+    ];
+
+#[cfg_attr(rustfmt, rustfmt_skip)]
+static BOX_BY_COORDS: [[usize; 9]; 9] =
+    [
+        [ 0, 0, 0, 1, 1, 1, 2, 2, 2, ],
+        [ 0, 0, 0, 1, 1, 1, 2, 2, 2, ],
+        [ 0, 0, 0, 1, 1, 1, 2, 2, 2, ],
+        [ 3, 3, 3, 4, 4, 4, 5, 5, 5, ],
+        [ 3, 3, 3, 4, 4, 4, 5, 5, 5, ],
+        [ 3, 3, 3, 4, 4, 4, 5, 5, 5, ],
+        [ 6, 6, 6, 7, 7, 7, 8, 8, 8, ],
+        [ 6, 6, 6, 7, 7, 7, 8, 8, 8, ],
+        [ 6, 6, 6, 7, 7, 7, 8, 8, 8, ],
+    ];
+
+#[cfg_attr(rustfmt, rustfmt_skip)]
+static BOX_TO_COORDS: [[(usize, usize); 9]; 9] =
+    [
+        [ (0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 2), ],
+        [ (0, 3), (0, 4), (0, 5), (1, 3), (1, 4), (0, 5), (2, 3), (2, 4), (2, 5), ],
+        [ (0, 6), (0, 7), (0, 8), (1, 6), (1, 7), (1, 8), (2, 6), (2, 7), (2, 8), ],
+        [ (3, 0), (3, 1), (3, 2), (4, 0), (4, 1), (4, 2), (5, 0), (5, 1), (5, 2), ],
+        [ (3, 3), (3, 4), (3, 5), (4, 3), (4, 4), (4, 5), (5, 3), (5, 4), (5, 5), ],
+        [ (3, 6), (3, 7), (3, 8), (4, 6), (4, 7), (4, 8), (5, 6), (5, 7), (5, 8), ],
+        [ (6, 0), (6, 1), (6, 2), (7, 0), (7, 1), (7, 2), (8, 0), (8, 1), (8, 2), ],
+        [ (6, 3), (6, 4), (6, 5), (7, 3), (7, 4), (7, 5), (8, 3), (8, 4), (8, 5), ],
+        [ (6, 6), (6, 7), (6, 8), (7, 6), (7, 7), (7, 8), (8, 6), (8, 7), (8, 8), ],
+    ];
+
 struct SolutionStep {
     placement: Placement,
     alts: Vec<Placement>,
@@ -100,9 +142,6 @@ impl LeastOptionsSolver {
 
                     let row = index / 9;
                     let col = index % 9;
-                    // Get box number by finding which third of rows respectively
-                    // columns the current position belongs to
-                    let box_num = (index / 27) * 3 + (index % 9) / 3;
 
                     // -----
                     // ROWS
@@ -170,7 +209,7 @@ impl LeastOptionsSolver {
 
                     let found_boxes = LeastOptionsSolver::find_option(
                         index,
-                        opts.box_options[box_num],
+                        opts.box_options[BOX_BY_INDEX[index]],
                         options,
                         &opts.placements,
                     );
@@ -182,7 +221,7 @@ impl LeastOptionsSolver {
                             LeastOptionsSolver::find_box_alts(
                                 row,
                                 col,
-                                box_num,
+                                BOX_BY_INDEX[index],
                                 val,
                                 &opts.placements,
                             ),
@@ -272,7 +311,7 @@ impl LeastOptionsSolver {
         opts: &[Group; 81],
     ) -> Vec<Placement> {
         (0..9)
-            .map(|box_index| LeastOptionsSolver::from_box_coords(box_num, box_index))
+            .map(|box_index| BOX_TO_COORDS[box_num][box_index])
             .filter(|(r, c)| (*r != row || *c != col) && opts[*r * 9 + *c][val] == 1)
             .map(|(r, c)| (r, c, (val + 1) as u8))
             .collect()
@@ -316,13 +355,6 @@ impl LeastOptionsSolver {
             _ => Ok(()),
         }
     }
-
-    fn from_box_coords(the_box: usize, box_index: usize) -> (usize, usize) {
-        (
-            (the_box / 3) * 3 + box_index / 3,
-            (the_box % 3) * 3 + box_index % 3,
-        )
-    }
 }
 
 struct AvailableOptions {
@@ -343,7 +375,7 @@ impl AvailableOptions {
 
         for row in 0..9 {
             for col in 0..9 {
-                let the_box = (row / 3) * 3 + (col / 3);
+                let the_box = BOX_BY_COORDS[row][col];
                 result.placements[row * 9 + col] = board.get_allowed_vals(row, col);
 
                 result.row_options[row] =
@@ -363,13 +395,13 @@ impl AvailableOptions {
     }
 
     pub fn on_value_changed(&mut self, board: &SudokuBoard, row: usize, col: usize) {
-        let the_box = (row / 3) * 3 + (col / 3);
+        let the_box = BOX_BY_COORDS[row][col];
         for (i, pos) in self.placements.iter_mut().enumerate().filter(|(index, _)| {
-            index / 9 == row || index % 9 == col || ((index / 27) * 3 + (index % 9) / 3) == the_box
+            index / 9 == row || index % 9 == col || BOX_BY_INDEX[*index] == the_box
         }) {
             let r = i / 9;
             let c = i % 9;
-            let b = (i / 27) * 3 + (i % 9) / 3;
+            let b = BOX_BY_INDEX[i];
 
             self.row_options[r] = sub(self.row_options[r], pos);
             self.col_options[c] = sub(self.col_options[c], pos);
