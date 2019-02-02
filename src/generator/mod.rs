@@ -19,7 +19,8 @@ impl From<u32> for Difficulty {
             1 => Difficulty::Medium,
             2 => Difficulty::Hard,
             3 => Difficulty::Evil,
-            _ => panic!(),
+            // Note that from(..) method must not fail
+            _ => Difficulty::Easy,
         }
     }
 }
@@ -27,10 +28,10 @@ impl From<u32> for Difficulty {
 impl fmt::Display for Difficulty {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Difficulty::Easy => write!(f, "Easy"),
+            Difficulty::Easy   => write!(f, "Easy"),
             Difficulty::Medium => write!(f, "Medium"),
-            Difficulty::Hard => write!(f, "Hard"),
-            Difficulty::Evil => write!(f, "Evil"),
+            Difficulty::Hard   => write!(f, "Hard"),
+            Difficulty::Evil   => write!(f, "Evil"),
         }
     }
 }
