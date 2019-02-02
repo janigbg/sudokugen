@@ -36,6 +36,7 @@ impl Generator for RandomSudoku {
     }
 }
 
+// TODO: Move this impl to a RandomSudokuBuilder for correct builder pattern
 impl RandomSudoku {
     /// Creates new `RandomSudoku` with default settings
     /// and specified `Solver`.
