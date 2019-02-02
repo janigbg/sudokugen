@@ -1,6 +1,6 @@
-use std::fmt;
-use super::board::{SudokuBoard};
+use super::board::SudokuBoard;
 use std::convert::From;
+use std::fmt;
 
 pub mod random_gen;
 
@@ -37,7 +37,7 @@ impl fmt::Display for Difficulty {
 
 pub struct Puzzle {
     pub board: SudokuBoard,
-    pub difficulty: Difficulty
+    pub difficulty: Difficulty,
 }
 
 /// Sudoku puzzle generator.
