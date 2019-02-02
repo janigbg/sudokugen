@@ -163,7 +163,7 @@ impl RandomSudoku {
 fn get_difficulty(removed: u32, branches: u32) -> Difficulty {
     let clues = 81 - removed;
     match (clues, branches) {
-        (c, b) if b > 1 || c < 25 => Difficulty::Evil,
+        (_, b) if b > 1 => Difficulty::Evil,
         (c, b) if b > 0 || c < 28 => Difficulty::Hard,
         (c, _) if c < 35 => Difficulty::Medium,
         _ => Difficulty::Easy,

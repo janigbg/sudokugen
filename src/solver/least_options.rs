@@ -26,8 +26,9 @@ impl Solver for LeastOptionsSolver {
 
         match self.find_solution(&mut clone) {
             Ok(_) => {
+                let branches = self.branches();
                 if self.find_solution(&mut clone).is_err() && self.solution.is_empty() {
-                    Verification::ValidWithBranches(self.branches())
+                    Verification::ValidWithBranches(branches)
                 } else {
                     Verification::NotValid
                 }
