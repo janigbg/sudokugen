@@ -112,7 +112,7 @@ impl RandomSudoku {
         board: &mut SudokuBoard,
         rng: &mut Pcg64Mcg,
     ) -> Result<(), String> {
-        let orig_values = board.values.clone();
+        let orig_values = board.values;
 
         for _ in 0..CREATE_CLUE_ATTEMPTS {
             let mut removal_sequence: Vec<usize> = (0..81).collect();
@@ -145,17 +145,18 @@ impl RandomSudoku {
             }
 
             if diff >= self.difficulty {
-                return Ok(convert_to_clues(board));
+                convert_to_clues(board);
+                return Ok(());
             } else {
                 println!("Need to retry puzzle generation.");
-                board.values = orig_values.clone();
+                board.values = orig_values;
             }
         }
 
-        Err(String::from(format!(
+        Err(format!(
             "Could not generate puzzle of difficulty {}",
             self.difficulty
-        )))
+        ))
     }
 }
 
@@ -169,7 +170,7 @@ fn get_difficulty(removed: u32, branches: u32) -> Difficulty {
     }
 }
 
-fn convert_to_clues(board: &mut SudokuBoard) -> () {
+fn convert_to_clues(board: &mut SudokuBoard) {
     for (i, clue) in board.clues.iter_mut().enumerate() {
         if board.values[i] > 0 {
             *clue = true;
@@ -196,7 +197,7 @@ fn get_board_with_clues(rng: &mut Pcg64Mcg) -> SudokuBoard {
                 .filter(|&val| placements[val as usize] == 1)
                 .collect::<Vec<u8>>()
             {
-                ref v if v.len() == 0 => (),
+                ref v if !v.is_empty() => (),
                 values => {
                     board
                         .place((row, col, *values.choose(rng).unwrap() + 1))

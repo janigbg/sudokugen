@@ -25,10 +25,13 @@ impl Solver for LeastOptionsSolver {
         self.max_iterations = None;
 
         match self.find_solution(&mut clone) {
-            Ok(_) => match self.find_solution(&mut clone).is_err() && self.solution.is_empty() {
-                true => Verification::ValidWithBranches(self.branches()),
-                false => Verification::NotValid,
-            },
+            Ok(_) => {
+                if self.find_solution(&mut clone).is_err() && self.solution.is_empty() {
+                    Verification::ValidWithBranches(self.branches())
+                } else {
+                    Verification::NotValid
+                }
+            }
             Err(_) => Verification::NotValid,
         }
     }
@@ -116,7 +119,7 @@ impl LeastOptionsSolver {
                             board,
                             (row, col, (val + 1) as u8),
                             LeastOptionsSolver::find_row_alts(row, col, val, &opts.placements),
-                            (options - 1) as u32,
+                            u32::from(options - 1),
                             &mut opts,
                         )?;
 
@@ -146,7 +149,7 @@ impl LeastOptionsSolver {
                             board,
                             (row, col, (val + 1) as u8),
                             LeastOptionsSolver::find_col_alts(row, col, val, &opts.placements),
-                            (options - 1) as u32,
+                            u32::from(options - 1),
                             &mut opts,
                         )?;
 
@@ -182,7 +185,7 @@ impl LeastOptionsSolver {
                                 val,
                                 &opts.placements,
                             ),
-                            (options - 1) as u32,
+                            u32::from(options - 1),
                             &mut opts,
                         )?;
 
@@ -212,7 +215,7 @@ impl LeastOptionsSolver {
                             board.place((row, col, 0))?;
                             opts.on_value_changed(board, row, col);
 
-                            if step.alts.len() > 0 {
+                            if !step.alts.is_empty() {
                                 let new_val = step.alts.pop().unwrap();
                                 self.place_value(
                                     board,
@@ -245,7 +248,6 @@ impl LeastOptionsSolver {
     /// Finds alternative placements for value on same row.
     fn find_row_alts(row: usize, col: usize, val: usize, opts: &[Group; 81]) -> Vec<Placement> {
         (0..9)
-            .into_iter()
             .filter(|c| *c != col && opts[row * 9 + c][val] == 1)
             .map(|c| (row, c, (val + 1) as u8))
             .collect()
@@ -254,7 +256,6 @@ impl LeastOptionsSolver {
     /// Finds alternative placements for value on same column.
     fn find_col_alts(row: usize, col: usize, val: usize, opts: &[Group; 81]) -> Vec<Placement> {
         (0..9)
-            .into_iter()
             .map(|r| (r, opts[r * 9 + col]))
             .filter(|(i, r)| *i != row && r[val] == 1)
             .map(|(i, _)| (i, col, (val + 1) as u8))
@@ -270,7 +271,6 @@ impl LeastOptionsSolver {
         opts: &[Group; 81],
     ) -> Vec<Placement> {
         (0..9)
-            .into_iter()
             .map(|box_index| LeastOptionsSolver::from_box_coords(box_num, box_index))
             .filter(|(r, c)| (*r != row || *c != col) && opts[*r * 9 + *c][val] == 1)
             .map(|(r, c)| (r, c, (val + 1) as u8))
@@ -311,9 +311,7 @@ impl LeastOptionsSolver {
     fn inc_placement_counter(&mut self) -> Result<(), String> {
         self.iterations += 1;
         match self.max_iterations {
-            Some(max) if self.iterations > max => {
-                return Err(String::from(format!("Max placements attempted: {}", max)))
-            }
+            Some(max) if self.iterations > max => Err(format!("Max placements attempted: {}", max)),
             _ => Ok(()),
         }
     }
@@ -363,7 +361,7 @@ impl AvailableOptions {
         result
     }
 
-    pub fn on_value_changed(&mut self, board: &SudokuBoard, row: usize, col: usize) -> () {
+    pub fn on_value_changed(&mut self, board: &SudokuBoard, row: usize, col: usize) {
         let the_box = (row / 3) * 3 + (col / 3);
         for (i, pos) in self.placements.iter_mut().enumerate().filter(|(index, _)| {
             index / 9 == row || index % 9 == col || ((index / 27) * 3 + (index % 9) / 3) == the_box
