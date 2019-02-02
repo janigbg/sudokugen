@@ -125,21 +125,10 @@ impl RandomSudoku {
             while count < 81 {
                 let index = removal_sequence[count];
                 if board.values[index] > 0 && !board.clues[index] {
-                    let num = board.values[index];
-                    let (row, col) = (index / 9, index % 9);
-                    board.place((row, col, 0)).unwrap();
                     count += 1;
-                    if let Verification::ValidWithBranches(branches) = self.solver.verify(&board) {
-                        removed_cells += 1;
-                        let prev_diff = diff;
-                        diff = get_difficulty(removed_cells, branches);
-                        if diff > self.difficulty {
-                            diff = prev_diff;
-                            board.place((row, col, num)).unwrap();
-                            break;
-                        }
-                    } else {
-                        board.place((row, col, num)).unwrap();
+
+                    if self.try_removing_value(board, index, &mut removed_cells, &mut diff) {
+                        break;
                     }
                 }
             }
@@ -157,6 +146,31 @@ impl RandomSudoku {
             "Could not generate puzzle of difficulty {}",
             self.difficulty
         ))
+    }
+
+    fn try_removing_value(
+        &mut self,
+        board: &mut SudokuBoard,
+        index: usize,
+        removed_cells: &mut u32,
+        diff: &mut Difficulty,
+    ) -> bool {
+        let num = board.values[index];
+        let (row, col) = (index / 9, index % 9);
+        board.place((row, col, 0)).unwrap();
+        if let Verification::ValidWithBranches(branches) = self.solver.verify(&board) {
+            *removed_cells += 1;
+            let prev_diff = *diff;
+            *diff = get_difficulty(*removed_cells, branches);
+            if *diff > self.difficulty {
+                *diff = prev_diff;
+                board.place((row, col, num)).unwrap();
+                return true;
+            }
+        } else {
+            board.place((row, col, num)).unwrap();
+        }
+        false
     }
 }
 

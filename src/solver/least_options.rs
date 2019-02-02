@@ -497,7 +497,7 @@ mod tests {
         let board = SudokuBoard::with_clues(&REFLECTION_SYMMETRY);
 
         let result = LeastOptionsSolver::new().verify(&board);
-        assert_eq!(Verification::ValidWithBranches(0), result);
+        assert_eq!(Verification::ValidWithBranches(7), result);
     }
 
     #[test]
