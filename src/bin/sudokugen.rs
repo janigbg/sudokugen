@@ -16,8 +16,16 @@ fn main() {
     // Calculate number of clues
     let num_clues = puzzle.board.clues.iter().filter(|&c| *c).count();
     // Print out number of clues and the board
-    println!("\r\n# of clues: {}\r\n", num_clues);
-    println!("Verified board:\r\n{}", puzzle.board);
+    println!("\n# of clues: {}\n", num_clues);
+    println!("Verified board:\n{}", puzzle.board);
+    
+    // Create puzzle as string of numbers, e.g. "0100400..."
+    let board_values = puzzle.board.values
+        .iter()
+        .fold(String::new(), |s, &val| format!("{}{:01}", s, val));
+    // Print out puzzle as numbers
+    println!("Puzzle: {}", board_values);
+
     // Solve the board, why??
     LeastOptionsSolver::new()
         .solve(&mut puzzle.board.clone())
