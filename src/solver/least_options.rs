@@ -52,6 +52,20 @@ struct SolutionStep {
     branches: u32,
 }
 
+/// Sudoku solver using backtracking least options strategy.
+/// 
+/// # Remarks
+/// 
+/// Least options strategy means that the solver will find all
+/// placement options that cannot be placed anywhere else on
+/// a row, column or box. When no such options exist, the solver
+/// will find placements options that can be placed in either
+/// of two locations on a row, column or box. Then three, then
+/// four and so on.
+/// 
+/// When no placement options can be found the solver backtracks
+/// to the last branch (more than one option was available) with
+/// any remaining untried options and chooses the next one.
 #[derive(Default)]
 pub struct LeastOptionsSolver {
     solution: Vec<SolutionStep>,
@@ -320,11 +334,11 @@ impl LeastOptionsSolver {
     /// Finds number of placement options for value in a group (row, column or box).
     ///
     /// Returns `None` if no placement options.
-    fn find_option(index: usize, group: Group, options: u8, opts: &[Group; 81]) -> Option<usize> {
+    fn find_option(index: usize, group: Group, num_opts: u8, available_opts: &[Group; 81]) -> Option<usize> {
         group
             .iter()
             .enumerate()
-            .find(|(val, &amount)| amount == options && opts[index][*val] == 1)
+            .find(|(val, &amount)| amount == num_opts && available_opts[index][*val] == 1)
             .map(|pair| pair.0)
     }
 
