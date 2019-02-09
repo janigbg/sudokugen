@@ -7,3 +7,5 @@ edition = "2018"
 [dependencies]
 rand = "0.6"
 rand_pcg = "0.1"
+log = "0.4"
+env_logger = "0.6"

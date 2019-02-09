@@ -75,12 +75,23 @@ impl RandomSudoku {
         for (i, pos) in self.seed.iter_mut().enumerate() {
             *pos = seed_bytes[i % 4];
         }
+
+        debug!(
+            "Using seed {}",
+            self.seed
+                .iter()
+                .fold(String::new(), |s, &val| format!("{}{:X}", s, val))
+        );
+
         self
     }
 
     /// Sets target `Difficulty` of puzzle.
     pub fn difficulty(mut self, diff: Difficulty) -> RandomSudoku {
         self.difficulty = diff;
+
+        debug!("Using difficulty: {}", self.difficulty);
+
         self
     }
 }
@@ -100,7 +111,8 @@ impl RandomSudoku {
 
             let result = self.solver.try_solve(&mut board, Some(self.max_iterations));
 
-            if result.is_ok() {
+            if let Ok(solution) = result {
+                board = solution.board;
                 break;
             }
         }
@@ -135,10 +147,13 @@ impl RandomSudoku {
             }
 
             if diff >= self.difficulty {
+                info!("Valid puzzle found. Clues: {}, difficulty: {}",
+                    81 - removed_cells,
+                    diff);
                 convert_to_clues(board);
                 return Ok(());
             } else {
-                println!("Need to retry puzzle generation.");
+                info!("Need to retry puzzle generation.");
                 board.values = orig_values;
             }
         }
@@ -199,23 +214,23 @@ fn get_board_with_clues(rng: &mut Pcg64Mcg) -> SudokuBoard {
 
     add_sequence.shuffle(rng);
 
+    // Try to place up to 25 values on the board.
+    // The placements must be valid according to Sudoku rules.
     let mut index = 0;
     for _iteration in 0..25 {
-        let mut row: usize;
-        let mut col: usize;
         while index < 81 {
-            row = add_sequence[index] / 9;
-            col = add_sequence[index] % 9;
+            let row = add_sequence[index] / 9;
+            let col = add_sequence[index] % 9;
             let placements = board.get_allowed_vals(row, col);
             index += 1;
             match (0u8..9u8)
                 .filter(|&val| placements[val as usize] == 1)
                 .collect::<Vec<u8>>()
             {
-                ref v if !v.is_empty() => (),
-                values => {
+                ref empty if empty.is_empty() => (),
+                ref values => {
                     board
-                        .place((row, col, *values.choose(rng).unwrap() + 1))
+                        .place((row, col, values.choose(rng).unwrap() + 1))
                         .unwrap();
                     break;
                 }

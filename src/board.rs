@@ -11,6 +11,12 @@ pub struct SudokuBoard {
     pub clues: [bool; 81],
 }
 
+impl fmt::Debug for SudokuBoard {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
+}
+
 impl fmt::Display for SudokuBoard {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "-------------------------------------")?;

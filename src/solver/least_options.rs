@@ -53,16 +53,16 @@ struct SolutionStep {
 }
 
 /// Sudoku solver using backtracking least options strategy.
-/// 
+///
 /// # Remarks
-/// 
+///
 /// Least options strategy means that the solver will find all
 /// placement options that cannot be placed anywhere else on
 /// a row, column or box. When no such options exist, the solver
 /// will find placements options that can be placed in either
 /// of two locations on a row, column or box. Then three, then
 /// four and so on.
-/// 
+///
 /// When no placement options can be found the solver backtracks
 /// to the last branch (more than one option was available) with
 /// any remaining untried options and chooses the next one.
@@ -93,19 +93,19 @@ impl Solver for LeastOptionsSolver {
         }
     }
 
-    fn solve(&mut self, board: &mut SudokuBoard) -> Result<Solution, String> {
+    fn solve(&mut self, board: &SudokuBoard) -> Result<Solution, String> {
         self.try_solve(board, None)
     }
 
     fn try_solve(
         &mut self,
-        board: &mut SudokuBoard,
+        board: &SudokuBoard,
         max_iterations: Option<u32>,
     ) -> Result<Solution, String> {
         self.solution.clear();
         self.max_iterations = max_iterations;
-
-        self.find_solution(board)?;
+        let mut solve_board = board.clone();
+        self.find_solution(&mut solve_board)?;
 
         let (result, branches): (Vec<Placement>, Vec<u32>) = self
             .solution
@@ -113,6 +113,7 @@ impl Solver for LeastOptionsSolver {
             .map(|step| (step.placement, step.branches))
             .unzip();
         Ok(Solution {
+            board: solve_board,
             placements: result,
             branches: branches.iter().sum(),
         })
@@ -290,11 +291,11 @@ impl LeastOptionsSolver {
             }
         }
 
-        println!(
-            "Iterations:{}, branches:{}",
-            self.iterations,
-            self.branches()
-        );
+        // println!(
+        //     "Iterations:{}, branches:{}",
+        //     self.iterations,
+        //     self.branches()
+        // );
 
         Ok(())
     }
@@ -334,7 +335,12 @@ impl LeastOptionsSolver {
     /// Finds number of placement options for value in a group (row, column or box).
     ///
     /// Returns `None` if no placement options.
-    fn find_option(index: usize, group: Group, num_opts: u8, available_opts: &[Group; 81]) -> Option<usize> {
+    fn find_option(
+        index: usize,
+        group: Group,
+        num_opts: u8,
+        available_opts: &[Group; 81],
+    ) -> Option<usize> {
         group
             .iter()
             .enumerate()

@@ -1,8 +1,7 @@
-
 /// Group represents a row, column or box
 pub type Group = [u8; 9];
 
-/// 
+///
 pub fn add(a: Group, b: &Group) -> Group {
     new_array_from(a.iter().zip(b).map(|(a, b)| a + b))
 }
