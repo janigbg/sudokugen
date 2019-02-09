@@ -1,7 +1,7 @@
 extern crate rand;
 extern crate sudokugen;
-use std::io;
 use std::env;
+use std::io;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
@@ -33,8 +33,7 @@ fn generate_puzzle() -> Result<(), Box<std::error::Error>> {
     println!("Puzzle: {}", board_values);
 
     // Solve the board, why??
-    LeastOptionsSolver::new()
-        .solve(&mut puzzle.board.clone())?;
+    LeastOptionsSolver::new().solve(&mut puzzle.board.clone())?;
     // Read Enter from keyboard input
     let mut input = String::new();
     let _ = io::stdin().read_line(&mut input);
@@ -48,6 +47,6 @@ fn main() {
     if let Err(e) = generate_puzzle() {
         error!("Error during puzzle generation: {}", e);
     }
-    
+
     env::remove_var("RUST_LOG");
 }

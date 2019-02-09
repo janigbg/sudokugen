@@ -147,9 +147,11 @@ impl RandomSudoku {
             }
 
             if diff >= self.difficulty {
-                info!("Valid puzzle found. Clues: {}, difficulty: {}",
+                info!(
+                    "Valid puzzle found. Clues: {}, difficulty: {}",
                     81 - removed_cells,
-                    diff);
+                    diff
+                );
                 convert_to_clues(board);
                 return Ok(());
             } else {
