@@ -47,6 +47,4 @@ fn main() {
     if let Err(e) = generate_puzzle() {
         error!("Error during puzzle generation: {}", e);
     }
-
-    env::remove_var("RUST_LOG");
 }

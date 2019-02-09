@@ -161,8 +161,9 @@ impl RandomSudoku {
         }
 
         Err(format!(
-            "Could not generate puzzle of difficulty {}",
-            self.difficulty
+            "Could not generate puzzle of difficulty {} after {} attempts",
+            self.difficulty,
+            CREATE_CLUE_ATTEMPTS
         ))
     }
 

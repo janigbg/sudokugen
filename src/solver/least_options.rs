@@ -291,11 +291,12 @@ impl LeastOptionsSolver {
             }
         }
 
-        // println!(
-        //     "Iterations:{}, branches:{}",
-        //     self.iterations,
-        //     self.branches()
-        // );
+        trace!(
+            "find_solution: Valid: {}, Iterations: {}, branches: {}",
+            board.is_valid(),
+            self.iterations,
+            self.branches()
+        );
 
         Ok(())
     }
