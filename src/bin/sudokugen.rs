@@ -40,6 +40,7 @@ fn generate_puzzle() -> Result<(), Box<std::error::Error>> {
     Ok(())
 }
 
+// TODO: Support arguments for difficulty, logging and seed
 fn main() {
     env::set_var("RUST_LOG", "debug");
     env_logger::init();
