@@ -12,7 +12,6 @@ extern crate sudokugen;
 use sudokugen::generator::random_gen::*;
 use sudokugen::generator::{Difficulty, Generator};
 use sudokugen::solver::least_options::LeastOptionsSolver;
-use sudokugen::solver::Solver;
 
 fn generate_puzzle() -> Result<(), Box<std::error::Error>> {
     // Provide a Solver to generate puzzle
@@ -28,7 +27,7 @@ fn generate_puzzle() -> Result<(), Box<std::error::Error>> {
 
 fn main() {
     if let Err(e) = generate_puzzle() {
-        error!("Error during puzzle generation: {}", e);
+        println!("Error during puzzle generation: {}", e);
     }
 }
 ```
